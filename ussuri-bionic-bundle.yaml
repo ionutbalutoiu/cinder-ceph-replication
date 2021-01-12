@@ -7,6 +7,7 @@ variables:
   osd-devices: &osd-devices /dev/sdb /dev/sdc /dev/sdd
   expected-osd-count: &expected-osd-count 6
   expected-mon-count: &expected-mon-count 1
+  ceph-osd-replication-count: &ceph-osd-replication-count 1
   default-space: &default-space mgmt
 
 machines:
@@ -20,84 +21,11 @@ machines:
     constraints: "tags=openstack"
 
 applications:
-  site-a-ceph-mon:
-    charm: ../../charms/ceph-mon
-    num_units: 1
-    bindings:
-      "": *default-space
-    options:
-      expected-osd-count: *expected-osd-count
-      monitor-count: *expected-mon-count
-      source: *openstack-origin
-    to:
-    - lxd:0
-  site-a-ceph-osd:
-    charm: ../../charms/ceph-osd
-    num_units: 2
-    bindings:
-      "": *default-space
-    options:
-      osd-devices: *osd-devices
-      source: *openstack-origin
-    to:
-    - '0'
-    - '1'
-  site-b-ceph-mon:
-    charm: ../../charms/ceph-mon
-    num_units: 1
-    bindings:
-      "": *default-space
-    options:
-      expected-osd-count: *expected-osd-count
-      monitor-count: *expected-mon-count
-      source: *openstack-origin
-    to:
-    - lxd:2
-  site-b-ceph-osd:
-    charm: ../../charms/ceph-osd
-    num_units: 2
-    bindings:
-      "": *default-space
-    options:
-      osd-devices: *osd-devices
-      source: *openstack-origin
-    to:
-    - '2'
-    - '3'
-  site-a-ceph-rbd-mirror:
-    charm: ../../charm-builds/ceph-rbd-mirror
-    num_units: 1
-    options:
-      source: *openstack-origin
-    bindings:
-      "": *default-space
-    to:
-    - lxd:1
-  site-b-ceph-rbd-mirror:
-    charm: ../../charm-builds/ceph-rbd-mirror
-    num_units: 1
-    options:
-      source: *openstack-origin
-    bindings:
-      "": *default-space
-    to:
-    - lxd:3
-  site-a-cinder-ceph:
-    charm: ../../charms/cinder-ceph
-    bindings:
-      "": *default-space
-    options:
-      ceph-osd-replication-count: 2
-      rbd-mirroring-mode: image
-  site-b-cinder-ceph:
-    charm: ../../charms/cinder-ceph
-    bindings:
-      "": *default-space
-    options:
-      ceph-osd-replication-count: 2
-      rbd-mirroring-mode: image
+  #
+  # Applications for the OpenStack cloud
+  #
   cinder:
-    charm: ../../charms/cinder
+    charm: cs:~openstack-charmers-next/cinder
     num_units: 1
     bindings:
       "": *default-space
@@ -109,18 +37,17 @@ applications:
     to:
     - lxd:0
   glance:
-    charm: ../../charms/glance
+    charm: cs:~openstack-charmers-next/glance
     num_units: 1
     bindings:
       "": *default-space
     options:
       worker-multiplier: *worker-multiplier
       openstack-origin: *openstack-origin
-      ceph-osd-replication-count: 2
     to:
     - lxd:1
   keystone:
-    charm: ../../charms/keystone
+    charm: cs:~openstack-charmers-next/keystone
     num_units: 1
     bindings:
       "": *default-space
@@ -130,11 +57,11 @@ applications:
     to:
     - lxd:0
   neutron-api-plugin-ovn:
-    charm: ../../charm-builds/neutron-api-plugin-ovn
+    charm: cs:~openstack-charmers-next/neutron-api-plugin-ovn
     bindings:
       "": *default-space
   neutron-api:
-    charm: ../../charms/neutron-api
+    charm: cs:~openstack-charmers-next/neutron-api
     num_units: 1
     bindings:
       "": *default-space
@@ -146,7 +73,7 @@ applications:
     to:
     - lxd:1
   placement:
-    charm: ../../charm-builds/placement
+    charm: cs:~openstack-charmers-next/placement
     num_units: 1
     bindings:
       "": *default-space
@@ -156,7 +83,7 @@ applications:
     to:
     - lxd:0
   nova-cloud-controller:
-    charm: ../../charms/nova-cloud-controller
+    charm: cs:~openstack-charmers-next/nova-cloud-controller
     num_units: 1
     bindings:
       "": *default-space
@@ -167,7 +94,7 @@ applications:
     to:
     - lxd:1
   nova-compute:
-    charm: ../../charms/nova-compute
+    charm: cs:~openstack-charmers-next/nova-compute
     num_units: 2
     bindings:
       "": *default-space
@@ -181,14 +108,14 @@ applications:
     - '0'
     - '1'
   rabbitmq-server:
-    charm: ../../charms/rabbitmq-server
+    charm: cs:~openstack-charmers-next/rabbitmq-server
     num_units: 1
     bindings:
       "": *default-space
     to:
     - lxd:0
   percona-cluster:
-    charm: ../../charms/percona-cluster
+    charm: cs:~openstack-charmers-next/percona-cluster
     num_units: 1
     bindings:
       "": *default-space
@@ -200,7 +127,7 @@ applications:
     to:
     - lxd:1
   ovn-central:
-    charm: ../../charm-builds/ovn-central
+    charm: cs:~openstack-charmers-next/ovn-central
     num_units: 2
     bindings:
       "": *default-space
@@ -210,21 +137,106 @@ applications:
     - lxd:0
     - lxd:1
   ovn-chassis:
-    charm: ../../charm-builds/ovn-chassis
+    charm: cs:~openstack-charmers-next/ovn-chassis
     bindings:
       "": *default-space
     options:
       ovn-bridge-mappings: external:br-ex
       bridge-interface-mappings: *data-port
   vault:
-    charm: ../../charm-builds/vault
+    charm: cs:~openstack-charmers-next/vault
     num_units: 1
     bindings:
       "": *default-space
     to:
     - lxd:0
+  #
+  # Applications for the site-a Ceph cluster
+  #
+  site-a-ceph-mon:
+    charm: cs:~openstack-charmers-next/ceph-mon
+    num_units: 1
+    bindings:
+      "": *default-space
+    options:
+      expected-osd-count: *expected-osd-count
+      monitor-count: *expected-mon-count
+      source: *openstack-origin
+    to:
+    - lxd:0
+  site-a-ceph-osd:
+    charm: cs:~openstack-charmers-next/ceph-osd
+    num_units: 2
+    bindings:
+      "": *default-space
+    options:
+      osd-devices: *osd-devices
+      source: *openstack-origin
+    to:
+    - '0'
+    - '1'
+  site-a-ceph-rbd-mirror:
+    charm: cs:~openstack-charmers-next/ceph-rbd-mirror
+    num_units: 1
+    options:
+      source: *openstack-origin
+    bindings:
+      "": *default-space
+    to:
+    - lxd:1
+  site-a-cinder-ceph:
+    charm: cs:~openstack-charmers-next/cinder-ceph
+    bindings:
+      "": *default-space
+    options:
+      ceph-osd-replication-count: *ceph-osd-replication-count
+      rbd-mirroring-mode: image
+  #
+  # Applications for the site-b Ceph cluster
+  #
+  site-b-ceph-mon:
+    charm: cs:~openstack-charmers-next/ceph-mon
+    num_units: 1
+    bindings:
+      "": *default-space
+    options:
+      expected-osd-count: *expected-osd-count
+      monitor-count: *expected-mon-count
+      source: *openstack-origin
+    to:
+    - lxd:2
+  site-b-ceph-osd:
+    charm: cs:~openstack-charmers-next/ceph-osd
+    num_units: 2
+    bindings:
+      "": *default-space
+    options:
+      osd-devices: *osd-devices
+      source: *openstack-origin
+    to:
+    - '2'
+    - '3'
+  site-b-ceph-rbd-mirror:
+    charm: cs:~openstack-charmers-next/ceph-rbd-mirror
+    num_units: 1
+    options:
+      source: *openstack-origin
+    bindings:
+      "": *default-space
+    to:
+    - lxd:3
+  site-b-cinder-ceph:
+    charm: cs:~openstack-charmers-next/cinder-ceph
+    bindings:
+      "": *default-space
+    options:
+      ceph-osd-replication-count: *ceph-osd-replication-count
+      rbd-mirroring-mode: image
 
 relations:
+  #
+  # Relations for the OpenStack cloud
+  #
   - ["glance:identity-service", "keystone:identity-service"]
   - ["glance:amqp", "rabbitmq-server:amqp"]
   - ["neutron-api:identity-service", "keystone:identity-service"]
@@ -262,26 +274,32 @@ relations:
   - ["vault:certificates", "keystone:certificates"]
   - ["vault:certificates", "nova-cloud-controller:certificates"]
   - ["vault:certificates", "placement:certificates"]
-
-  - ["site-a-ceph-mon:client", "nova-compute:ceph"]
-  - ["site-a-ceph-mon:client", "glance:ceph"]
+  #
+  # Relations for the site-a Ceph cluster
+  #
   - ["site-a-ceph-mon:osd", "site-a-ceph-osd:mon"]
+  - ["site-a-ceph-mon:rbd-mirror", "site-a-ceph-rbd-mirror:ceph-local"]
+  #
+  # Relations for the site-b Ceph cluster
+  #
   - ["site-b-ceph-mon:osd", "site-b-ceph-osd:mon"]
-
-  - ["site-a-ceph-rbd-mirror:ceph-local", "site-a-ceph-mon"]
-  - ["site-a-ceph-rbd-mirror:ceph-remote", "site-b-ceph-mon"]
-
-  - ["site-b-ceph-rbd-mirror:ceph-local", "site-b-ceph-mon"]
-  - ["site-b-ceph-rbd-mirror:ceph-remote", "site-a-ceph-mon"]
-
+  - ["site-b-ceph-mon:rbd-mirror", "site-b-ceph-rbd-mirror:ceph-local"]
+  #
+  # Enable Ceph RBD two-way mirroring between site-a and site-b
+  #
+  - ["site-a-ceph-mon", "site-b-ceph-rbd-mirror:ceph-remote"]
+  - ["site-b-ceph-mon", "site-a-ceph-rbd-mirror:ceph-remote"]
+  #
+  # Link OpenStack Cinder to site-a (primary backend) and site-b (secondary backend, with per-image replication)
+  #
   - ["site-a-cinder-ceph:storage-backend", "cinder:storage-backend"]
   - ["site-a-cinder-ceph:ceph-access", "nova-compute:ceph-access"]
-  - ["site-a-cinder-ceph:ceph-replication-device-access", "nova-compute:ceph-access"]
   - ["site-a-cinder-ceph:ceph", "site-a-ceph-mon:client"]
   - ["site-a-cinder-ceph:ceph-replication-device", "site-b-ceph-mon:client"]
-
+  #
+  # Link OpenStack Cinder to site-b (primary backend) and site-a (secondary backend, with per-image replication)
+  #
   - ["site-b-cinder-ceph:storage-backend", "cinder:storage-backend"]
   - ["site-b-cinder-ceph:ceph-access", "nova-compute:ceph-access"]
-  - ["site-b-cinder-ceph:ceph-replication-device-access", "nova-compute:ceph-access"]
   - ["site-b-cinder-ceph:ceph", "site-b-ceph-mon:client"]
   - ["site-b-cinder-ceph:ceph-replication-device", "site-a-ceph-mon:client"]
