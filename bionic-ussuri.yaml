@@ -8,7 +8,6 @@ variables:
   expected-osd-count: &expected-osd-count 6
   expected-mon-count: &expected-mon-count 1
   ceph-osd-replication-count: &ceph-osd-replication-count 1
-  default-space: &default-space mgmt
 
 machines:
   '0':
@@ -27,8 +26,6 @@ applications:
   cinder:
     charm: cs:~openstack-charmers-next/cinder
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       block-device: None
       glance-api-version: 2
@@ -39,8 +36,6 @@ applications:
   glance:
     charm: cs:~openstack-charmers-next/glance
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       worker-multiplier: *worker-multiplier
       openstack-origin: *openstack-origin
@@ -49,8 +44,6 @@ applications:
   keystone:
     charm: cs:~openstack-charmers-next/keystone
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       worker-multiplier: *worker-multiplier
       openstack-origin: *openstack-origin
@@ -58,13 +51,9 @@ applications:
     - lxd:0
   neutron-api-plugin-ovn:
     charm: cs:~openstack-charmers-next/neutron-api-plugin-ovn
-    bindings:
-      "": *default-space
   neutron-api:
     charm: cs:~openstack-charmers-next/neutron-api
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       neutron-security-groups: true
       flat-network-providers: external
@@ -75,8 +64,6 @@ applications:
   placement:
     charm: cs:~openstack-charmers-next/placement
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       worker-multiplier: *worker-multiplier
       openstack-origin: *openstack-origin
@@ -85,8 +72,6 @@ applications:
   nova-cloud-controller:
     charm: cs:~openstack-charmers-next/nova-cloud-controller
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       network-manager: Neutron
       worker-multiplier: *worker-multiplier
@@ -96,8 +81,6 @@ applications:
   nova-compute:
     charm: cs:~openstack-charmers-next/nova-compute
     num_units: 2
-    bindings:
-      "": *default-space
     options:
       config-flags: default_ephemeral_format=ext4
       enable-live-migration: true
@@ -110,15 +93,11 @@ applications:
   rabbitmq-server:
     charm: cs:~openstack-charmers-next/rabbitmq-server
     num_units: 1
-    bindings:
-      "": *default-space
     to:
     - lxd:0
   percona-cluster:
     charm: cs:~openstack-charmers-next/percona-cluster
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       source: *openstack-origin
       innodb-buffer-pool-size: "25%"
@@ -129,8 +108,6 @@ applications:
   ovn-central:
     charm: cs:~openstack-charmers-next/ovn-central
     num_units: 2
-    bindings:
-      "": *default-space
     options:
       source: *openstack-origin
     to:
@@ -138,16 +115,12 @@ applications:
     - lxd:1
   ovn-chassis:
     charm: cs:~openstack-charmers-next/ovn-chassis
-    bindings:
-      "": *default-space
     options:
       ovn-bridge-mappings: external:br-ex
       bridge-interface-mappings: *data-port
   vault:
     charm: cs:~openstack-charmers-next/vault
     num_units: 1
-    bindings:
-      "": *default-space
     to:
     - lxd:0
   #
@@ -156,8 +129,6 @@ applications:
   site-a-ceph-mon:
     charm: cs:~openstack-charmers-next/ceph-mon
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       expected-osd-count: *expected-osd-count
       monitor-count: *expected-mon-count
@@ -167,8 +138,6 @@ applications:
   site-a-ceph-osd:
     charm: cs:~openstack-charmers-next/ceph-osd
     num_units: 2
-    bindings:
-      "": *default-space
     options:
       osd-devices: *osd-devices
       source: *openstack-origin
@@ -180,14 +149,10 @@ applications:
     num_units: 1
     options:
       source: *openstack-origin
-    bindings:
-      "": *default-space
     to:
     - lxd:1
   site-a-cinder-ceph:
     charm: cs:~openstack-charmers-next/cinder-ceph
-    bindings:
-      "": *default-space
     options:
       ceph-osd-replication-count: *ceph-osd-replication-count
       rbd-mirroring-mode: image
@@ -197,8 +162,6 @@ applications:
   site-b-ceph-mon:
     charm: cs:~openstack-charmers-next/ceph-mon
     num_units: 1
-    bindings:
-      "": *default-space
     options:
       expected-osd-count: *expected-osd-count
       monitor-count: *expected-mon-count
@@ -208,8 +171,6 @@ applications:
   site-b-ceph-osd:
     charm: cs:~openstack-charmers-next/ceph-osd
     num_units: 2
-    bindings:
-      "": *default-space
     options:
       osd-devices: *osd-devices
       source: *openstack-origin
@@ -221,14 +182,10 @@ applications:
     num_units: 1
     options:
       source: *openstack-origin
-    bindings:
-      "": *default-space
     to:
     - lxd:3
   site-b-cinder-ceph:
     charm: cs:~openstack-charmers-next/cinder-ceph
-    bindings:
-      "": *default-space
     options:
       ceph-osd-replication-count: *ceph-osd-replication-count
       rbd-mirroring-mode: image
