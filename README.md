@@ -198,18 +198,88 @@ ubuntu@vm-site-a:~$ sync
 
 We'll do the failover now.
 
-**IMPORTANT NOTE**:
+#### IMPORTANT NOTES WITH CONTROLLED FAILOVER (both sites are online):
 
-* If both Ceph sites are online, it is not recommended to do the failover when Cinder volumes are `in-use`.
+* It is **not** recommended to do the failover when Cinder volumes are `in-use`.
 
   During the failover, Cinder will try and demote Ceph images from the primary site, and if there is an active connection to it, the operation may fail, and the volume could transition to `error` state.
 
-Thus, we'll make sure the volumes are not `in-use` before doing the failover:
-```
-ssh ubuntu@$VM_FIP sudo umount ./data
-openstack server remove volume vm-site-a volume-site-a
-openstack server stop volume-vm-site-a
-```
+  Thus, we'll make sure the volumes are not `in-use` before doing the failover:
+  ```
+  ssh ubuntu@$VM_FIP sudo umount ./data
+  openstack server remove volume vm-site-a volume-site-a
+  openstack server stop volume-vm-site-a
+  ```
+
+* Make sure that the Ceph RBD Mirroring daemon finished its work (at least the initial replica sync), before doing the failover. Otherwise, the failover operation might not work (transitioning the volumes into `error` state). In this scenario, the cinder-volume service will log the following the error: `[errno 16] RBD image is busy (error promoting image)`.
+
+  We can check volumes' mirroring state via the `status` Juju action (from the `ceph-rbd-mirror` charm). This needs to executed against the site-b `ceph-rbd-mirror` unit:
+  ```
+  $ echo 'verbose: True' > /tmp/status-params.yaml
+  $ juju run-action --wait site-b-ceph-rbd-mirror/0 status --params /tmp/status-params.yaml
+  unit-site-b-ceph-rbd-mirror-0:
+    UnitId: site-b-ceph-rbd-mirror/0
+    id: "69"
+    results:
+      output: |-
+        cinder-ceph-a: health: WARNING
+        daemon health: OK
+        image health: WARNING
+        images: 2 total
+            2 unknown
+
+        DAEMONS
+        service 4633:
+          instance_id: 5775
+          client_id: juju-489814-default-27
+          hostname: juju-489814-default-27
+          version: 15.2.8
+          leader: true
+          health: OK
+
+
+        IMAGES
+        volume-663c7cb8-cd67-4a5f-b6a3-95e0a8af4acd:
+          global_id:   f2842155-b3fc-40d2-920c-7bed4bd8fc3f
+          state:       up+replaying
+          description: replaying, {"bytes_per_second":17.5,"entries_behind_primary":0,"entries_per_second":0.2,"non_primary_position":{"entry_tid":3,"object_number":3,"tag_tid":1},"primary_position":{"entry_tid":3,"object_number":3,"tag_tid":1}}
+          service:     juju-489814-default-27 on juju-489814-default-27
+          last_update: 2021-04-12 15:11:17
+
+        volume-cd920cfb-2d2c-441a-9664-41d49efef6f6:
+          global_id:   6e96ab92-facd-440c-a330-44a1a6b5cb1b
+          state:       up+replaying
+          description: replaying, {"bytes_per_second":142336.67,"entries_behind_primary":3211,"entries_per_second":9.470000000000001,"non_primary_position":{"entry_tid":941,"object_number":1,"tag_tid":4},"primary_position":{"entry_tid":4152,"object_number":4,"tag_tid":4},"seconds_until_synced":339}
+          service:     juju-489814-default-27 on juju-489814-default-27
+          last_update: 2021-04-12 15:11:17
+        cinder-ceph-b: health: OK
+        daemon health: OK
+        image health: OK
+        images: 0 total
+
+        DAEMONS
+        service 4633:
+          instance_id: 5818
+          client_id: juju-489814-default-27
+          hostname: juju-489814-default-27
+          version: 15.2.8
+          leader: true
+          health: OK
+
+
+        IMAGES
+    status: completed
+    timing:
+      completed: 2021-04-12 15:11:42 +0000 UTC
+      enqueued: 2021-04-12 15:11:39 +0000 UTC
+      started: 2021-04-12 15:11:40 +0000 UTC
+  ```
+
+  The `IMAGES` section from the verbose `status` action output needs to be inspected.
+
+  The secondary images that are already fully mirrored will report `"entries_behind_primary":0` (like `volume-663c7cb8-cd67-4a5f-b6a3-95e0a8af4acd` above). And the images that are still being mirrored will have `entries_behind_primary` bigger than `0` (like `"entries_behind_primary":3211` for `volume-cd920cfb-2d2c-441a-9664-41d49efef6f6` above).
+
+  We need to have `"entries_behind_primary":0` given by all the secondary Ceph images.
 
 Execute the Cinder failover:
 ```
