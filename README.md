@@ -412,6 +412,16 @@ When site-a is fixed, and it's online again, we will have two primary Ceph image
 
 The Ceph RBD mirror will not sync the volume until the split-brain scenario is fixed manually.
 
+There are two methods to solve the split-brain scenario:
+1. Using Ceph `rbd` cli commands.
+2. Using Juju actions.
+
+The method `#2` is more user friendly, since the problem is solved via Juju commands only. So, it is the preferred method.
+
+On the other hand, method `#1` needs: SSH-ing into the `ceph-rbd-mirror` unit, identifying each volume with replication enabled, and running the appropriate `rbd` cli call for it.
+
+#### 1. Using Ceph `rbd` cli commands
+
 Bring back site-a by starting the Ceph Mon there:
 ```
 juju ssh 0
@@ -472,6 +482,34 @@ volume-4aa0db0d-cc8b-450a-afda-d06501cdd915:
 
 If there are more replicated volumes, you need to do the same procedure for all of them.
 
+#### 2. Using Juju actions
+
+Demote the Ceph images from site-a using:
+```
+juju run-action --wait site-a-ceph-rbd-mirror/0 demote --string-args pools="site-a-cinder-ceph"
+```
+
+Re-sync the site-a images via:
+```
+juju run-action --wait site-a-ceph-rbd-mirror/0 resync-pools --string-args pools="site-a-cinder-ceph"
+```
+
+Keep in mind that this only flags the site-a images to be re-synced against the primary images from site-b, and the Ceph RBD mirror daemon does this in the background.
+
+We need to wait until the operation is complete for all the volumes. The operation can be monitored using the `status` Juju action with `verbose` flag:
+```
+echo 'verbose: True' > /tmp/status-params.yaml
+juju run-action --wait site-a-ceph-rbd-mirror/0 status --params /tmp/status-params.yaml
+```
+
+The `IMAGES` section from the action output needs to be inspected.
+
+As long as there are images reporting state `up+syncing`, the re-sync operation is not complete. Keep in mind that only images marked with replication enabled are re-synced.
+
+When the resync operation is complete, all the replicated volumes will report `state: up+replaying` and `"entries_behind_primary":0`. We are ready to failback at this point.
+
+#### Failback
+
 Once all the volumes are properly demoted + resynced, we can do the actual failback via the `cinder` cli:
 ```
 cinder failover-host cinder@site-a-cinder-ceph --backend_id default
@@ -505,3 +543,11 @@ volume-4aa0db0d-cc8b-450a-afda-d06501cdd915:
   service:     juju-6fb684-1-lxd-5 on juju-6fb684-1-lxd-5
   last_update: 2021-01-14 22:28:19
 ```
+
+Or you can use the Juju action to do that:
+```
+echo 'verbose: True' > /tmp/status-params.yaml
+juju run-action --wait site-a-ceph-rbd-mirror/0 status --params /tmp/status-params.yaml
+```
+
+You may notice images with `state: up+stopped` and `description: local image is primary`.
